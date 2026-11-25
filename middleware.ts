@@ -5,6 +5,18 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("admin_session")?.value;
 
+  // Protect /api/dashboard routes
+  if (pathname.startsWith("/api/dashboard/")) {
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const session = await verifyToken(token);
+    if (!session) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   // Protect /dashboard routes
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
     if (!token) {
@@ -41,6 +53,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/dashboard", "/login"],
+  matcher: ["/dashboard/:path*", "/dashboard", "/login", "/api/dashboard/:path*"],
 };
 
