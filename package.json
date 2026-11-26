@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cloudflare": "opennextjs-cloudflare",
-    "preview:cloudflare": "opennextjs-cloudflare && wrangler dev",
-    "deploy:cloudflare": "opennextjs-cloudflare && wrangler deploy"
+    "build:cloudflare": "opennextjs-cloudflare build",
+    "preview:cloudflare": "opennextjs-cloudflare preview",
+    "deploy:cloudflare": "opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

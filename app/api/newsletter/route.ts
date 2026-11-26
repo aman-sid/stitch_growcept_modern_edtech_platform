@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getD1Database } from "@/lib/d1";
 
-export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +23,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. Try Cloudflare D1 first
+    const d1 = await getD1Database();
+    if (d1) {
+      try {
+        const subscriber = await d1.prepare(`
+          INSERT INTO newsletter_subscribers (email, source, status)
+          VALUES (?, ?, 'active')
+          ON CONFLICT(email) DO UPDATE SET status = 'active'
+          RETURNING id, email, created_at, status;
+        `).bind(
+          email.trim().toLowerCase(),
+          source || "website_footer"
+        ).first();
+
+        return NextResponse.json({
+          success: true,
+          data: subscriber,
+          message: "Subscribed to 100x MINDS intelligence dispatches via Cloudflare D1.",
+        });
+      } catch (d1Err: any) {
+        console.error("[D1 Error] newsletter_subscribers insert:", d1Err);
+      }
+    }
+
+    // 2. Fallback to Supabase if configured
     const supabase = getSupabaseServerClient();
     if (!supabase) {
       return NextResponse.json({
