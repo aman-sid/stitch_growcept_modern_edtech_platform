@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { initialBlogs, BlogPost } from "@/data/blogs";
 
+export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
   try {
