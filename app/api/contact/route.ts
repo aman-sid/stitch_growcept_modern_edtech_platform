@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getD1Database } from "@/lib/d1";
 
-export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +23,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. Try Cloudflare D1 first
+    const d1 = await getD1Database();
+    if (d1) {
+      try {
+        const metadataStr = JSON.stringify({
+          userAgent: req.headers.get("user-agent") || undefined,
+          referer: req.headers.get("referer") || undefined,
+        });
+
+        const inserted = await d1.prepare(`
+          INSERT INTO contact_inquiries (name, email, company, role, track, budget, timeline, message, status, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+          RETURNING id, name, email, created_at, status;
+        `).bind(
+          name.trim(),
+          email.trim().toLowerCase(),
+          company?.trim() || null,
+          role?.trim() || null,
+          track || "ai-consulting",
+          budget || null,
+          timeline || "immediate",
+          message?.trim() || null,
+          metadataStr
+        ).first();
+
+        return NextResponse.json({
+          success: true,
+          data: inserted,
+          message: "Architectural consultation inquiry recorded successfully in Cloudflare D1.",
+        });
+      } catch (d1Err: any) {
+        console.error("[D1 Error] contact_inquiries insert:", d1Err);
+      }
+    }
+
+    // 2. Fallback to Supabase if configured
     const supabase = getSupabaseServerClient();
     if (!supabase) {
-      // In development or if supabase credentials aren't set yet, return simulated success
+      // In development or if credentials aren't set yet, return simulated success
       return NextResponse.json({
         success: true,
         mock: true,
-        message: "Inquiry recorded in mock mode (Supabase keys not configured).",
+        message: "Inquiry recorded in mock mode (Database keys not configured).",
       });
     }
 

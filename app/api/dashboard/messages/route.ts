@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export const runtime = "edge";
 
 const MOCK_MESSAGES = [
   {
